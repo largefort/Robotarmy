@@ -253,12 +253,56 @@ body {
         visibility: visible !important;
     }
 }
+
+.christmas-theme {
+    background: linear-gradient(135deg, #1a1a1a, #2d2d2d), 
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Ccircle cx='5' cy='5' r='1' fill='white' opacity='0.1'/%3E%3C/svg%3E");
+}
+
+.halloween-theme {
+    background: linear-gradient(135deg, #1a0f00, #2d1a00);
+}
+
+.valentines-theme {
+    background: linear-gradient(135deg, #2d1a2d, #4d1a4d);
+}
+
+.easter-theme {
+    background: linear-gradient(135deg, #1a2d1a, #1a4d1a);
+}
+
+.heart-particle {
+    position: fixed;
+    top: -20px;
+    width: 20px;
+    height: 20px;
+    background: pink;
+    clip-path: path('M10,4 C10,2 8,0 5,0 C2,0 0,2 0,4 C0,7 5,10 5,10 C5,10 10,7 10,4');
+    animation: fall 5s linear forwards;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+@keyframes fall {
+    to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+.valentines-theme .robot svg {
+    filter: hue-rotate(320deg);
+}
+
+.halloween-theme .robot svg {
+    filter: hue-rotate(30deg) saturate(1.5);
+}
 </style></head><body>
 <div class="content-area">
     <div class="resources">
         <div class="resource">
             <h3>Credits</h3>
-            <div><span id="credits">10</span></div>
+            <div><span id="credits">0</span></div>
             <div>Per second: <span id="credits-per-second">0</span></div>
         </div>
         <div class="resource">
@@ -302,7 +346,8 @@ let gameState = {
         basic: { count: 0, production: 1, cost: 10, totalProduced: 0 },
         advanced: { count: 0, production: 5, cost: 50, totalProduced: 0 },
         super: { count: 0, production: 20, cost: 200, totalProduced: 0 }
-    }
+    },
+    currentSeason: null
 };
 
 function updateDisplay() {
@@ -331,6 +376,14 @@ function createRobotSVG(type, id) {
         super: "#f66"
     };
     
+    let seasonalElement = '';
+    if (gameState.currentSeason === 'christmas') {
+        seasonalElement = `
+            <path d="M20,5 Q25,0 30,5 L25,15 Z" fill="red"/>
+            <circle cx="30" cy="5" r="2" fill="white"/>
+        `;
+    }
+    
     return `<div class="robot">
         <svg width="50" height="70" viewBox="0 0 50 70">
             <defs>
@@ -354,6 +407,7 @@ function createRobotSVG(type, id) {
             <rect x="27" y="45" width="6" height="15" fill="url(#${type}-${id}-gradient)" filter="url(#${type}-${id}-glow)" rx="2"/>
             <circle cx="20" cy="25" r="2" fill="#fff" filter="url(#${type}-${id}-glow)"/>
             <circle cx="30" cy="25" r="2" fill="#fff" filter="url(#${type}-${id}-glow)"/>
+            ${seasonalElement}
         </svg>
         <div class="info-box">
             Type: ${type.charAt(0).toUpperCase() + type.slice(1)} Robot<br>
@@ -450,12 +504,90 @@ function loadGame() {
                 basic: { count: 0, production: 1, cost: 10, totalProduced: 0 },
                 advanced: { count: 0, production: 5, cost: 50, totalProduced: 0 },
                 super: { count: 0, production: 20, cost: 200, totalProduced: 0 }
-            }
+            },
+            currentSeason: null
         };
         updateDisplay();
         updateArmyDisplay();
         saveGame();
     }
+}
+
+function checkSeasonalEvents() {
+    const now = new Date();
+    const month = now.getMonth();
+    const day = now.getDate();
+    
+    // Define seasonal periods
+    const seasons = {
+        christmas: { month: 11, startDay: 1, endDay: 31 },
+        halloween: { month: 9, startDay: 1, endDay: 31 },
+        valentines: { month: 1, startDay: 1, endDay: 14 },
+        easter: { 
+            // Easter is variable, this is simplified
+            month: 3, startDay: 1, endDay: 30
+        }
+    };
+    
+    // Check which season we're in
+    if (month === seasons.christmas.month) {
+        activateSeason('christmas');
+    } else if (month === seasons.halloween.month) {
+        activateSeason('halloween');
+    } else if (month === seasons.valentines.month && day <= seasons.valentines.endDay) {
+        activateSeason('valentines');
+    } else if (month === seasons.easter.month) {
+        activateSeason('easter');
+    } else {
+        activateSeason('normal');
+    }
+}
+
+function activateSeason(season) {
+    if (gameState.currentSeason === season) return;
+    gameState.currentSeason = season;
+    
+    // Remove existing seasonal effects
+    document.body.classList.remove('christmas-theme', 'halloween-theme', 'valentines-theme', 'easter-theme');
+    
+    // Stop any existing particle effects
+    if (window.particleInterval) {
+        clearInterval(window.particleInterval);
+    }
+    
+    // Apply new seasonal theme
+    switch(season) {
+        case 'christmas':
+            document.body.classList.add('christmas-theme');
+            break;
+        case 'halloween':
+            document.body.classList.add('halloween-theme');
+            break;
+        case 'valentines':
+            document.body.classList.add('valentines-theme');
+            createHeartParticles();
+            break;
+        case 'easter':
+            document.body.classList.add('easter-theme');
+            break;
+        case 'normal':
+            break;
+    }
+    
+    updateArmyDisplay(); // Refresh robots with seasonal appearances
+}
+
+function createHeartParticles() {
+    if (window.particleInterval) return;
+    
+    window.particleInterval = setInterval(() => {
+        const heart = document.createElement('div');
+        heart.className = 'heart-particle';
+        heart.style.left = Math.random() * 100 + 'vw';
+        document.body.appendChild(heart);
+        
+        setTimeout(() => heart.remove(), 5000);
+    }, 300);
 }
 
 document.getElementById('basic-robot').addEventListener('click', () => buyRobot('basic'));
@@ -478,4 +610,6 @@ setInterval(updateArmyDisplay, 1000);
 
 loadGame();
 updateDisplay();
+setInterval(checkSeasonalEvents, 60000); // Check for seasonal changes every minute
+checkSeasonalEvents(); // Initial check
 </script></body></html>
